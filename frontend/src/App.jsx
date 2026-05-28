@@ -9,6 +9,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyOTP from './pages/VerifyOTP';
 import Profile from './pages/Profile';
 import OrderSuccess from './pages/OrderSuccess';
 import About from './pages/About';
@@ -34,6 +35,7 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/ordersuccess" element={<OrderSuccess />} />
           <Route path="/about" element={<About />} />

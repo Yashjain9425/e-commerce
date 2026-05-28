@@ -18,6 +18,14 @@ const Login = () => {
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
+
+      // If backend indicates verification required, redirect to verify page
+      if (data && data.requiresVerification) {
+        alert(data.message || 'Please verify your email. A new OTP has been sent.');
+        navigate(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+        return;
+      }
+
       if (res.ok) {
         login(data);
         navigate('/');
