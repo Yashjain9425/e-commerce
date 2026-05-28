@@ -7,6 +7,20 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
+
+const getOtpExpiry = () => new Date(Date.now() + 5 * 60 * 1000);
+
+const sendOtpEmail = async (email, subject, otp, heading = 'ShopNest - Verify your email') => {
+  const message = `
+    <h2>${heading}</h2>
+    <p>Your verification OTP is: <strong>${otp}</strong></p>
+    <p>This OTP will expire in 5 minutes.</p>
+  `;
+
+  await sendEmail({ email, subject, message });
+};
+
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -19,24 +33,14 @@ const registerUser = async (req, res) => {
 
     // If user exists but is not verified, regenerate OTP and resend
     if (userExists && !userExists.isVerified) {
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
-      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const otp = generateOtp();
+      const otpExpiry = getOtpExpiry();
 
       userExists.otp = otp;
       userExists.otpExpiry = otpExpiry;
       await userExists.save();
 
-      const message = `
-        <h2>ShopNest - Verify your email</h2>
-        <p>Your new verification OTP is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 5 minutes.</p>
-      `;
-
-      await sendEmail({
-        email: userExists.email,
-        subject: 'ShopNest - New OTP',
-        message
-      });
+      await sendOtpEmail(userExists.email, 'ShopNest - New OTP', otp, 'ShopNest - Verify your email');
 
       return res.status(200).json({ message: 'Account exists but is not verified. New OTP sent.' });
     }
@@ -45,8 +49,8 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Generate OTP and expiry (5 minutes)
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+    const otp = generateOtp();
+    const otpExpiry = getOtpExpiry();
 
     // Create user with isVerified=false and store OTP
     const user = await User.create({
@@ -60,18 +64,7 @@ const registerUser = async (req, res) => {
 
     if (user) {
       // Send OTP Email
-      const message = `
-        <h2>Welcome to ShopNest, ${name}!</h2>
-        <p>Thank you for registering on our platform.</p>
-        <p>Your one-time verification OTP is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 5 minutes.</p>
-      `;
-
-      await sendEmail({
-        email: user.email,
-        subject: 'ShopNest - Verify your email',
-        message
-      });
+      await sendOtpEmail(user.email, 'ShopNest - Verify your email', otp, `Welcome to ShopNest, ${name}!`);
 
       // Return minimal user info; do NOT auto-login until verified
       res.status(201).json({
@@ -96,20 +89,14 @@ const loginUser = async (req, res) => {
 
     // If user exists but is not verified, generate and send a fresh OTP
     if (user && !user.isVerified) {
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
-      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      const otp = generateOtp();
+      const otpExpiry = getOtpExpiry();
 
       user.otp = otp;
       user.otpExpiry = otpExpiry;
       await user.save();
 
-      const message = `
-        <h2>ShopNest - Verify your email</h2>
-        <p>Your verification OTP is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 5 minutes.</p>
-      `;
-
-      await sendEmail({ email: user.email, subject: 'ShopNest - New OTP', message });
+      await sendOtpEmail(user.email, 'ShopNest - New OTP', otp, 'ShopNest - Verify your email');
 
       return res.json({
         success: false,
@@ -184,20 +171,14 @@ const resendOtp = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+    const otp = generateOtp();
+    const otpExpiry = getOtpExpiry();
 
     user.otp = otp;
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    const message = `
-      <h2>ShopNest OTP</h2>
-      <p>Your new verification OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 5 minutes.</p>
-    `;
-
-    await sendEmail({ email: user.email, subject: 'ShopNest - Resend OTP', message });
+    await sendOtpEmail(user.email, 'ShopNest - Resend OTP', otp, 'ShopNest OTP');
 
     res.json({ message: 'OTP resent successfully' });
   } catch (error) {
