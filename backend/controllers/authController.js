@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
       
       // Send Welcome / OTP Email
       const message = `
-        <h2>Welcome to ShopNest, ${name}!</h2>
+        <h2>Welcome to REGARD TRADER, ${name}!</h2>
         <p>Thank you for registering on our platform.</p>
         <p>Your one-time verification/discount OTP is: <strong>${otp}</strong></p>
       `;
