@@ -94,13 +94,37 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
+    // If user exists but is not verified, generate and send a fresh OTP
+    if (user && !user.isVerified) {
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+      user.otp = otp;
+      user.otpExpiry = otpExpiry;
+      await user.save();
+
+      const message = `
+        <h2>ShopNest - Verify your email</h2>
+        <p>Your verification OTP is: <strong>${otp}</strong></p>
+        <p>This OTP will expire in 5 minutes.</p>
+      `;
+
+      await sendEmail({ email: user.email, subject: 'ShopNest - New OTP', message });
+
+      return res.json({
+        success: false,
+        requiresVerification: true,
+        message: 'Please verify your email. A new OTP has been sent.',
+        email: user.email
+      });
+    }
+
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid email or password' });
 
-    if (!user.isVerified) return res.status(403).json({ message: 'Please verify your email first' });
-
+    // At this point user exists and password matches and isVerified must be true
     res.json({
       _id: user._id,
       name: user.name,
