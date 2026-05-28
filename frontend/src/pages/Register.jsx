@@ -20,9 +20,9 @@ const Register = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('Registration Successful! Please check your email for the Welcome OTP.');
-        login(data);
-        navigate('/');
+        // Show backend message (covers both new registration and existing-unverified)
+        alert(data.message || 'Registration successful. Please check your email for the OTP.');
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
       } else {
         alert(data.message);
       }
