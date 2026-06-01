@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,8 +9,29 @@ const AddProduct = () => {
   const [formData, setFormData] = useState({
     name: '', description: '', price: '', category: '', stock: ''
   });
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hovered, setHovered] = useState(null);
+
+  useEffect(() => {
+    if (!images || images.length === 0) {
+      setPreviewUrls([]);
+      return;
+    }
+
+    const urls = Array.from(images).map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+
+    // cleanup: revoke object URLs to avoid memory leaks
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [images]);
+
+  const removeImageAt = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   if (!user || user.role !== 'admin') {
     navigate('/');
@@ -19,7 +40,7 @@ const AddProduct = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!image) return alert('Please select an image');
+    if (images.length === 0) return alert('Please select at least one image');
     
     setLoading(true);
     const data = new FormData();
@@ -28,7 +49,9 @@ const AddProduct = () => {
     data.append('price', formData.price);
     data.append('category', formData.category);
     data.append('stock', formData.stock);
-    data.append('image', image);
+    images.forEach((img) => {
+      data.append('images', img);
+    });
 
     try {
       const res = await fetch('/api/products', {
@@ -39,7 +62,7 @@ const AddProduct = () => {
       const responseData = await res.json();
       
       if (res.ok) {
-        alert('Product created successfully with Cloudinary Image URL!');
+        alert('Product created successfully!');
         navigate('/shop');
       } else {
         alert(responseData.message || 'Error creating product');
@@ -81,17 +104,74 @@ const AddProduct = () => {
           style={inputStyle} 
         />
         
-        <div style={{ padding: '15px', border: '1px dashed #f97316', borderRadius: '8px' }}>
-          <label style={{ display: 'block', marginBottom: '10px', color: '#a1a1aa' }}>Upload Product Image (Cloudinary)</label>
-          <input 
-            type="file" accept="image/*" required 
-            onChange={(e) => setImage(e.target.files[0])} 
-            style={{ color: '#fff' }}
-          />
+        <div style={uploadBoxStyle}>
+          <label style={{ display: 'block', marginBottom: '8px', color: '#a1a1aa', fontSize: '0.95rem' }}>Upload Product Images - Select Multiple</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input
+              id="product-images-input"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 0) return;
+                setImages((prev) => [...prev, ...files]);
+                // allow selecting the same file(s) again by clearing the input
+                e.target.value = '';
+              }}
+              style={{ display: 'none' }}
+            />
+
+            <label htmlFor="product-images-input" style={uploadButtonStyle}>
+              <span style={{ fontSize: 14 }}>Choose images</span>
+              <small style={{ marginLeft: 8, opacity: 0.9 }}>{images.length ? `${images.length}` : '0'}</small>
+            </label>
+
+            <div style={{ color: images.length ? '#a3e635' : '#a1a1aa', fontSize: 13 }}>{images.length} image(s) selected</div>
+          </div>
+
+          {/* Previews */}
+          {previewUrls.length > 0 && (
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+              {previewUrls.map((src, idx) => (
+                <div
+                  key={idx}
+                  onMouseEnter={() => setHovered(idx)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{ position: 'relative', width: 92, height: 92, borderRadius: 8, overflow: 'hidden', background: '#0b0b0c', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.03)'}}
+                >
+                  <img src={src} alt={`preview-${idx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
+                  {hovered === idx && (
+                    <button
+                      onClick={() => removeImageAt(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: 6,
+                        right: 6,
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                      title="Remove image"
+                    >
+                      <span style={{ fontSize: 18, lineHeight: 1, transform: 'translateY(-1px)' }}>−</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <button type="submit" disabled={loading} className="btn" style={{ marginTop: '10px' }}>
-          {loading ? 'Uploading & Creating...' : 'Publish Product'}
+          {loading ? `Uploading ${images.length} image(s) & Creating...` : 'Publish Product'}
         </button>
       </form>
     </div>
@@ -107,5 +187,30 @@ const inputStyle = {
   fontSize: '15px',
   outline: 'none'
 };
+
+const uploadBoxStyle = {
+  padding: '15px',
+  borderRadius: '8px',
+  border: '1px dashed rgba(249,115,22,0.9)',
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)',
+};
+
+const uploadButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  padding: '10px 16px',
+  background: 'linear-gradient(90deg, #0b0b0c, #111827)',
+  color: '#f3f4f6',
+  borderRadius: '10px',
+  border: '1px solid rgba(249,115,22,0.06)',
+  cursor: 'pointer',
+  fontWeight: 700,
+  boxShadow: '0 6px 18px rgba(2,6,23,0.6)'
+};
+
+// generate previews when images change
+// move effect here to avoid adding import at top for brevity; but we will add useEffect
 
 export default AddProduct;

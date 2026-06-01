@@ -8,6 +8,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -16,6 +17,11 @@ const ProductDetail = () => {
         const res = await fetch(`/api/products/${id}`);
         const data = await res.json();
         setProduct(data);
+        // Handle both old format (string) and new format (object with url)
+        const firstImageUrl = typeof data.images?.[0] === 'string' 
+          ? data.images[0] 
+          : data.images?.[0]?.url;
+        setSelectedImage(firstImageUrl);
       } catch (error) {
         console.error(error);
       } finally {
@@ -27,11 +33,17 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (product) {
+      // Extract URL from both old (string) and new (object) format
+      const imageUrls = product.images?.map(img => 
+        typeof img === 'string' ? img : img.url
+      );
+      
       dispatch(addToCart({
         productId: product._id,
         name: product.name,
         price: product.price,
-        imageUrl: product.imageUrl,
+        images: imageUrls,
+        imageUrl: imageUrls?.[0],
         qty: 1
       }));
       alert('Successfully added to your cart!');
@@ -50,9 +62,35 @@ const ProductDetail = () => {
       </div>
 
       <div className="product-detail">
-        {/* Left Side: Image */}
+        {/* Left Side: Image Gallery */}
         <div className="detail-image-container">
-          <img src={product.imageUrl} alt={product.name} className="detail-image" />
+          <div style={{ marginBottom: '15px' }}>
+            <img src={selectedImage} alt={product.name} className="detail-image" style={{ width: '100%', borderRadius: '8px' }} />
+          </div>
+          {product.images && product.images.length > 1 && (
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }}>
+              {product.images.map((img, index) => {
+                // Handle both old format (string) and new format (object with url)
+                const imageUrl = typeof img === 'string' ? img : img.url;
+                return (
+                  <img
+                    key={index}
+                    src={imageUrl}
+                    alt={`${product.name} ${index + 1}`}
+                    onClick={() => setSelectedImage(imageUrl)}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: selectedImage === imageUrl ? '2px solid #f97316' : '2px solid #27272a',
+                      objectFit: 'cover'
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right Side: Information Block */}

@@ -8,7 +8,7 @@ const EditProduct = () => {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', stock: '' });
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,7 +29,9 @@ const EditProduct = () => {
     data.append('price', formData.price);
     data.append('category', formData.category);
     data.append('stock', formData.stock);
-    if (image) data.append('image', image);
+    images.forEach((img) => {
+      data.append('images', img);
+    });
 
     const res = await fetch(`/api/products/${id}`, {
       method: 'PUT',
@@ -53,8 +55,9 @@ const EditProduct = () => {
         <input type="text" placeholder="Category" required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} style={inputStyle} />
         <input type="number" placeholder="Stock" required value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} style={inputStyle} />
         <div style={{ padding: '15px', border: '1px dashed #f97316', borderRadius: '8px' }}>
-          <label style={{ display: 'block', marginBottom: '10px', color: '#a1a1aa' }}>Replace Image (Optional)</label>
-          <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} style={{ color: '#fff' }} />
+          <label style={{ display: 'block', marginBottom: '10px', color: '#a1a1aa' }}>Replace Images (Optional) - Select Multiple</label>
+          <input type="file" accept="image/*" multiple onChange={(e) => setImages([...e.target.files])} style={{ color: '#fff' }} />
+          {images.length > 0 && <p style={{ color: '#10b981', marginTop: '10px' }}>{images.length} image(s) selected</p>}
         </div>
         <button type="submit" disabled={loading} className="btn" style={{ marginTop: '10px' }}>
           {loading ? 'Updating...' : 'Update Product'}
