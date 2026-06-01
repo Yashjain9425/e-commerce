@@ -24,7 +24,7 @@ router
   .post(
     protect,
     admin,
-    upload.array("images", 5),
+    upload.array("images", 10),
     createProduct
   );
 
@@ -34,7 +34,7 @@ router
   .put(
     protect,
     admin,
-    upload.array("images", 5),
+    upload.array("images", 10),
     updateProduct
   )
   .delete(
