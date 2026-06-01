@@ -29,21 +29,28 @@ const Cart = () => {
       ) : (
         <div className="cart-layout">
           <div className="cart-items">
-            {cartItems.map((item) => (
-              <div key={item.productId} className="cart-item">
-                <img src={item.imageUrl} alt={item.name} className="cart-item-image" />
-                <div className="cart-item-details">
-                  <h4>{item.name}</h4>
-                  <p>₹{item.price}</p>
-                  <div className="qty-controls">
-                    <button onClick={() => handleUpdateQty(item, item.qty - 1)}>-</button>
-                    <span>{item.qty}</span>
-                    <button onClick={() => handleUpdateQty(item, item.qty + 1)}>+</button>
+            {cartItems.map((item) => {
+              // Handle both old format (string array) and new format (object array)
+              const imageUrl = typeof item.images?.[0] === 'string'
+                ? item.images[0]
+                : item.images?.[0]?.url || item.imageUrl;
+
+              return (
+                <div key={item.productId} className="cart-item">
+                  <img src={imageUrl} alt={item.name} className="cart-item-image" />
+                  <div className="cart-item-details">
+                    <h4>{item.name}</h4>
+                    <p>₹{item.price}</p>
+                    <div className="qty-controls">
+                      <button onClick={() => handleUpdateQty(item, item.qty - 1)}>-</button>
+                      <span>{item.qty}</span>
+                      <button onClick={() => handleUpdateQty(item, item.qty + 1)}>+</button>
+                    </div>
+                    <button onClick={() => handleRemove(item.productId)} className="btn-remove">Remove</button>
                   </div>
-                  <button onClick={() => handleRemove(item.productId)} className="btn-remove">Remove</button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="cart-summary">
             <h3>Total: ₹{totalPrice.toFixed(2)}</h3>
